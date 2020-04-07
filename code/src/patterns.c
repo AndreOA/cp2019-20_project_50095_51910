@@ -24,28 +24,22 @@ void reduce (void *dest, void *src, size_t nJob, size_t sizeJob, void (*worker)(
     char *d = dest;
     char *s = src;
     int threadNum;
-    int numThreads;
     char * privDest;
 
-    if (nJob > 0) {
-
-        numThreads = omp_get_num_threads();
-        if(nJob < numThreads)
-            numThreads = nJob;
-        
-       #pragma omp parallel num_threads(numThreads) private(privDest)
+    if (nJob > 0) {        
+       #pragma omp parallel private(privDest)
        {
             privDest = malloc(sizeJob);
-            int threadIndex = omp_get_thread_num() * (nJob / numThreads);
-            int final = 0;
-            int extra = nJob % numThreads;
+            int first = 1;
 
-            if ( extra && (omp_get_thread_num() <= extra) )
-                final = 1;
-            
-            memcpy(&privDest[0], &s[threadIndex * sizeJob], sizeJob);
-            for (int i = threadIndex + 1;  i < threadIndex + (nJob/numThreads) + final; i++){
-                worker (&privDest[0], &privDest[0], &s[i * sizeJob]);
+            #pragma omp for
+            for (int i = 0; i < nJob; i++) {
+                if(first){
+                    memcpy(&privDest[0], &s[i * sizeJob], sizeJob);
+                    first = 0;
+                }
+                else
+                    worker (&privDest[0], &privDest[0], &s[i * sizeJob]);
             }
 
             #pragma omp single 
