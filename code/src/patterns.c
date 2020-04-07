@@ -18,26 +18,33 @@ void map (void *dest, void *src, size_t nJob, size_t sizeJob, void (*worker)(voi
 }
 
 void reduce (void *dest, void *src, size_t nJob, size_t sizeJob, void (*worker)(void *v1, const void *v2, const void *v3)) {
-    /* To be implemented */
     assert (dest != NULL);
     assert (src != NULL);
     assert (worker != NULL);
     char *d = dest;
     char *s = src;
-    int threadNum ;
+    int threadNum;
+    int numThreads;
     char * privDest;
+
     if (nJob > 0) {
+
+        numThreads = omp_get_num_threads();
+        if(nJob < numThreads)
+            numThreads = nJob;
         
-       #pragma omp parallel private(privDest)
+       #pragma omp parallel num_threads(numThreads) private(privDest)
        {
             privDest = malloc(sizeJob);
-            int index = omp_get_thread_num() * (nJob/omp_get_num_threads());
+            int threadIndex = omp_get_thread_num() * (nJob / numThreads);
             int final = 0;
-            memcpy(&privDest[0], &s[index*sizeJob], sizeJob);
-            if ( (nJob%omp_get_num_threads()) && (omp_get_thread_num() == (omp_get_num_threads() -1) ))
+            int extra = nJob % numThreads;
+
+            if ( extra && (omp_get_thread_num() <= extra) )
                 final = 1;
             
-            for (int i = index +1;  i < index +( nJob/omp_get_num_threads()) + final;  i++){
+            memcpy(&privDest[0], &s[threadIndex * sizeJob], sizeJob);
+            for (int i = threadIndex + 1;  i < threadIndex + (nJob/numThreads) + final; i++){
                 worker (&privDest[0], &privDest[0], &s[i * sizeJob]);
             }
 
