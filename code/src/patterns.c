@@ -21,8 +21,8 @@ void reduce (void *dest, void *src, size_t nJob, size_t sizeJob, void (*worker)(
     assert (dest != NULL);
     assert (src != NULL);
     assert (worker != NULL);
-    char *d = dest;
-    char *s = src;
+    char *d = (char *) dest;
+    char *s = (char *) src;
     int threadNum;
     char * privDest;
 
@@ -44,8 +44,8 @@ void reduce (void *dest, void *src, size_t nJob, size_t sizeJob, void (*worker)(
 
             #pragma omp single 
             {
-            memcpy(&d[0], &privDest[0], sizeJob);
-            threadNum = omp_get_thread_num();
+                memcpy(&d[0], &privDest[0], sizeJob);
+                threadNum = omp_get_thread_num();
             }
 
             #pragma omp critical 
